@@ -169,8 +169,6 @@ tmp/
 temp/
 .tmp/
 
-# uv specific
-uv.lock
 
 # FastAPI specific
 .uvicorn-logs/
