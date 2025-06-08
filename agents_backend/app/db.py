@@ -69,7 +69,8 @@ class Database:
                 title TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 last_message_at TEXT NOT NULL,
-                agent_name TEXT DEFAULT 'search_bot'
+                agent_name TEXT NOT NULL,
+                username TEXT NOT NULL
             );
         """)
         # Update messages table to include session_id
@@ -85,9 +86,9 @@ class Database:
         con.commit()
         return con
 
-    async def add_messages(self, session_id: str, messages: bytes, agent_name: str = "search_bot"):
+    async def add_messages(self, session_id: str, messages: bytes, username: str, agent_name: str):
         # First, ensure the session exists
-        await self._ensure_session_exists(session_id, agent_name)
+        await self._ensure_session_exists(session_id, username, agent_name)
 
         # Add the messages
         await self._asyncify(
@@ -110,9 +111,12 @@ class Database:
 
         await self._asyncify(self.con.commit)
 
-    async def get_messages(self, session_id: str) -> list[ModelMessage]:
+    async def get_messages(self, session_id: str, username: str) -> list[ModelMessage]:
         c = await self._asyncify(
-            self._execute, "SELECT message_list FROM messages WHERE session_id = ? ORDER BY id", session_id
+            self._execute,
+            "SELECT message_list FROM messages m JOIN sessions s ON m.session_id = s.id WHERE s.id = ? AND s.username = ? ORDER BY m.id",
+            session_id,
+            username,
         )
         rows = await self._asyncify(c.fetchall)
         messages: list[ModelMessage] = []
@@ -120,18 +124,21 @@ class Database:
             messages.extend(ModelMessagesTypeAdapter.validate_json(row[0]))
         return messages
 
-    async def get_session_agent(self, session_id: str) -> str:
+    async def get_session_agent(self, session_id: str, username: str) -> str:
         """Get the agent name for a specific session"""
-        c = await self._asyncify(self._execute, "SELECT agent_name FROM sessions WHERE id = ?", session_id)
+        c = await self._asyncify(
+            self._execute, "SELECT agent_name FROM sessions WHERE id = ? AND username = ?", session_id, username
+        )
         row = await self._asyncify(c.fetchone)
-        if row and row[0]:
-            return row[0]
-        return "search_bot"  # Default to search_bot if not found
+        if not row:
+            raise ValueError(f"Session {session_id} not found for user {username}")
+        return row[0]
 
-    async def get_sessions(self) -> list[Session]:
+    async def get_sessions(self, username: str) -> list[Session]:
         c = await self._asyncify(
             self._execute,
-            "SELECT id, title, created_at, last_message_at, agent_name FROM sessions ORDER BY last_message_at DESC",
+            "SELECT id, title, created_at, last_message_at, agent_name FROM sessions WHERE username = ? ORDER BY last_message_at DESC",
+            username,
         )
         rows = await self._asyncify(c.fetchall)
         sessions: list[Session] = []
@@ -142,15 +149,19 @@ class Database:
                     "title": row[1],
                     "created_at": row[2],
                     "last_message_at": row[3],
-                    "agent_name": row[4]
-                    if len(row) > 4
-                    else "search_bot",  # Default to search_bot for backward compatibility
+                    "agent_name": row[4],
                 }
             )
         return sessions
 
-    async def delete_session(self, session_id: str) -> bool:
+    async def delete_session(self, session_id: str, username: str) -> bool:
         """Delete a session and its messages"""
+        c = await self._asyncify(
+            self._execute, "SELECT id FROM sessions WHERE id = ? AND username = ?", session_id, username
+        )
+        if not await self._asyncify(c.fetchone):
+            return False  # Session does not exist or user does not have permission
+
         try:
             # First delete all messages for this session
             await self._asyncify(
@@ -173,21 +184,24 @@ class Database:
             print(f"Error deleting session: {e}")
             return False
 
-    async def _ensure_session_exists(self, session_id: str, agent_name: str = "search_bot"):
+    async def _ensure_session_exists(self, session_id: str, username: str, agent_name: str):
         # Check if session exists
-        c = await self._asyncify(self._execute, "SELECT id, agent_name FROM sessions WHERE id = ?", session_id)
+        c = await self._asyncify(
+            self._execute, "SELECT id, agent_name FROM sessions WHERE id = ? AND username = ?", session_id, username
+        )
         row = await self._asyncify(c.fetchone)
 
         if not row:
             # Create new session with a default title
             await self._asyncify(
                 self._execute,
-                "INSERT INTO sessions (id, title, created_at, last_message_at, agent_name) VALUES (?, ?, ?, ?, ?);",
+                "INSERT INTO sessions (id, title, created_at, last_message_at, agent_name, username) VALUES (?, ?, ?, ?, ?, ?);",
                 session_id,
                 f"{agent_name} {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}",
                 datetime.utcnow().isoformat(),
                 datetime.utcnow().isoformat(),
                 agent_name,
+                username,
                 commit=True,
             )
 

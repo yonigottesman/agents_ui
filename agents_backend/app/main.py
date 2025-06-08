@@ -1,26 +1,15 @@
 from __future__ import annotations as _annotations
 
-import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime
-from typing import Annotated, Literal
 
 import fastapi
-import pydantic
-from fastapi import Depends, Request
+from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
-from pydantic_ai import Agent
-from pydantic_ai.exceptions import UnexpectedModelBehavior
-from pydantic_ai.messages import (
-    ModelMessage,
-)
-from typing_extensions import TypedDict
+from fastapi.responses import JSONResponse
 
-from app.agents import agents_list, get_agent
 from app.core import router as core_router
-from app.db import Database, Session
-from app.login import CurrentUser, NotAuthenticatedException, get_current_user
+from app.db import Database
+from app.login import CurrentUser, NotAuthenticatedException
 from app.login import router as login_router
 
 

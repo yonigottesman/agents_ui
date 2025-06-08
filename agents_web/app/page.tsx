@@ -348,7 +348,7 @@ export default function ChatPage() {
     <div className="h-screen bg-[#0f0f0f] flex flex-col overflow-hidden">
       {/* Minimalistic Navbar - At the top */}
       <header className="bg-[#1a1a1a] border-b border-[#2a2a2a] p-4 flex-shrink-0 flex items-center justify-between z-10">
-        <h1 className="text-xl font-semibold text-white">Viz.ai Agents</h1>
+        <h1 className="text-xl font-semibold text-white">Agents</h1>
         <button onClick={logout} className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors border border-[#3a3a3a] shadow-sm">Logout</button>
       </header>
       
@@ -374,7 +374,7 @@ export default function ChatPage() {
           {!currentSessionId ? (
             <div className="flex h-full items-center justify-center">
               <div className="text-center p-8 max-w-2xl">
-                <h3 className="text-2xl font-semibold text-gray-300 mb-4">Welcome to Viz.ai Agents</h3>
+                <h3 className="text-2xl font-semibold text-gray-300 mb-4">Welcome to Agents</h3>
                 <p className="text-gray-400 mb-6">To get started, click the "NEW CHAT" button on the left to create a new session with your selected agent.</p>
                 <div className="flex justify-center">
                   <div className="bg-[#2a2a2a] p-4 rounded-lg border border-[#3a3a3a] text-gray-300 text-sm">

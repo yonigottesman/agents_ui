@@ -10,7 +10,7 @@ export const API_CONFIG = {
   FRONTEND_URL: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000',
 
   // Google OAuth Client ID
-  GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || 'client_id',
+  GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
   
 
   // API endpoints

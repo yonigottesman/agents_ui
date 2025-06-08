@@ -20,6 +20,19 @@ interface SessionPanelProps {
   onSessionDelete?: (sessionId: string) => void;
 }
 
+const getColorForSession = (sessionId: string) => {
+  let hash = 0;
+  if (sessionId.length === 0) return 'bg-gray-400';
+  for (let i = 0; i < sessionId.length; i++) {
+    const char = sessionId.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0; // Convert to 32bit integer
+  }
+  const colors = ['bg-blue-400', 'bg-green-400', 'bg-purple-400'];
+  const index = Math.abs(hash % colors.length);
+  return colors[index];
+};
+
 export default function SessionPanel({ currentSessionId, onSessionSelect, onNewSession, refreshTrigger, availableAgents, onSessionDelete }: SessionPanelProps) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -206,7 +219,7 @@ export default function SessionPanel({ currentSessionId, onSessionSelect, onNewS
             </div>
           ) : (
             <div className="space-y-1">
-              {sessions.map((session, index) => (
+              {sessions.map((session) => (
                 <div
                   key={session.id}
                   className={`w-full text-left px-3 py-2 rounded-md transition-all duration-200 group relative ${
@@ -222,11 +235,7 @@ export default function SessionPanel({ currentSessionId, onSessionSelect, onNewS
                       onClick={() => onSessionSelect(session.id)}
                     >
                       {/* Colored dot indicator */}
-                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                        index % 3 === 0 ? 'bg-blue-400' : 
-                        index % 3 === 1 ? 'bg-green-400' : 
-                        'bg-purple-400'
-                      }`} />
+                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getColorForSession(session.id)}`} />
                       
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate">

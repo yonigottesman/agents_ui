@@ -29,7 +29,7 @@ async def get_db(request: Request) -> Database:
 
 @router.get("/chat/")
 async def get_chat(session_id: str, user: CurrentUser, database: Database = Depends(get_db)) -> list[ModelMessage]:
-    msgs = await database.get_messages(session_id)
+    msgs = await database.get_messages(session_id, user)
     return msgs
 
 
@@ -40,7 +40,7 @@ async def get_agents() -> list[str]:
 
 @router.get("/sessions/")
 async def get_sessions(user: CurrentUser, database: Database = Depends(get_db)) -> list[Session]:
-    sessions = await database.get_sessions()
+    sessions = await database.get_sessions(user)
     return sessions
 
 
@@ -55,7 +55,7 @@ async def create_new_session(
     """Generate a new session ID and initialize with the selected agent"""
     session_id = f"session-{datetime.utcnow().timestamp()}-{uuid.uuid4().hex[:8]}"
     # Create the session with the specified agent
-    await database._ensure_session_exists(session_id, request.agent_name)
+    await database._ensure_session_exists(session_id, user, request.agent_name)
     return {"session_id": session_id, "agent_name": request.agent_name}
 
 
@@ -65,7 +65,7 @@ async def delete_session_path(
 ) -> dict[str, bool]:
     """Delete a session and its messages using path parameter"""
     print(f"Deleting session with ID (path): {session_id}")
-    success = await database.delete_session(session_id)
+    success = await database.delete_session(session_id, user)
     return {"success": success}
 
 
@@ -92,11 +92,11 @@ async def post_chat(
     async def stream_messages():
         yield (prompt.encode("utf-8") + b"\n")
 
-        agent_name = await database.get_session_agent(session_id)
+        agent_name = await database.get_session_agent(session_id, user)
 
         agent = get_agent(agent_name)
 
-        messages = await database.get_messages(session_id)
+        messages = await database.get_messages(session_id, user)
         async with agent.iter(prompt, message_history=messages) as agent_run:
             async for node in agent_run:
                 if Agent.is_user_prompt_node(node):
@@ -111,6 +111,6 @@ async def post_chat(
                     # yield NodeAdapter.dump_json(node)
                 else:
                     raise UnexpectedModelBehavior(f"Unexpected message type for chat app: {node}")
-            await database.add_messages(session_id, agent_run.result.new_messages_json(), agent_name)
+            await database.add_messages(session_id, agent_run.result.new_messages_json(), user, agent_name)
 
     return StreamingResponse(stream_messages(), media_type="text/plain")
